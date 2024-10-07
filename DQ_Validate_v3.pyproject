@@ -1,0 +1,23 @@
+{
+    "files": [
+        "UI/Components/CustomBusyIndicator.qml",
+        "UI/Components/CustomButton.qml",
+        "UI/Components/CustomFileDialog.qml",
+        "UI/Components/CustomMessageDialog.qml",
+        "UI/Components/CustomPane.qml",
+        "UI/Components/CustomTabButton.qml",
+        "UI/Components/CustomTableView.qml",
+        "UI/Components/DatePicker.qml",
+        "UI/Components/ErrorLogTable.qml",
+        "UI/Fonts/CustomFonts.qml",
+        "UI/Fonts/qmldir",
+        "UI/Pages/DatabaseManagement.qml",
+        "UI/Pages/ErrorLog.qml",
+        "UI/Pages/LineListManagement.qml",
+        "UI/Pages/Settings.qml",
+        "UI/Pages/SplashScreen.qml",
+        "UI/Utilities/GlobalTheme.qml",
+        "main.py",
+        "main.qml"
+    ]
+}
