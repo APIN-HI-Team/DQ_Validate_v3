@@ -1,5 +1,5 @@
-SET @startDate := 'DatePicker_QMLTYPE_4(0x122162f6fb0)';
-SET @endDate := '2024-10-19';
+SET @startDate := 'DatePicker_QMLTYPE_74(0x224f0e55d10)';
+SET @endDate := '2024-10-05';
 SELECT  
 "APIN" AS "IP", 
    (SELECT `state_province`  FROM  `location` WHERE `location_id` = 8 LIMIT 1) AS State,

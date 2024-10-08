@@ -11,10 +11,11 @@ import polars as pl
 import pandas as pd
 import duckdb as duck
 from pathlib import Path
+from functools import partial
 
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
-from PySide6.QtCore import QObject,Signal,Slot,Property,QThread,QTimer
+from PySide6.QtCore import Qt,QMetaObject,QObject,Signal,Slot,Property,QThread,QTimer
 
 from Modules.mysql_runner import MySQLRunner
 from Modules.config_handler import *
@@ -73,9 +74,9 @@ class Worker(QObject):
             self.dataReady.emit(self.df)
 
         except Exception as e:
-            self._error_message = str(e)
+            self._error_message = self.runner.sql_error()
             logging.error("Worker error: %s", self.error_message)
-            self.errorOccurred.emit(self._error_message)
+            self.errorOccurred.emit(self.error_message.split("': ")[1].strip())
 
         finally:
             self.taskFinished.emit()
@@ -133,6 +134,7 @@ class Core(QObject):
         # Ensure no existing worker or thread is running
         if self.worker_thread.isRunning():
             logging.warning("Thread is already running. Please wait.")
+            # self.cleanup_thread()
             return
         
         # Map linelist types to file paths
@@ -162,8 +164,8 @@ class Core(QObject):
         self.worker.errorOccurred.connect(self.handle_error)
 
         # Start the worker task when the thread starts
-        self.worker_thread.started.connect(lambda: self.worker.run(sql_file_path))
-
+        self.worker_thread.started.connect(self.worker.run(sql_file_path))
+        
          # Start the thread
         self.worker_thread.start()
        
@@ -257,6 +259,7 @@ class Core(QObject):
     @Slot(str)
     def handle_error(self, error_message: str):
         logging.error(f"Error occurred: {error_message}")
+        self.errorOccurred.emit(error_message)
         self.cleanup_thread()
 
     

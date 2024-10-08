@@ -119,7 +119,7 @@ Dialog {
                     text: customDialog.dialogMessage
                     elide: Text.ElideRight
 
-                    horizontalAlignment: Text.AlignHCenter
+                    horizontalAlignment: Text.AlignLeft
                     verticalAlignment: Text.AlignVCenter
                     wrapMode: Text.Wrap
 
@@ -136,7 +136,7 @@ Dialog {
         Rectangle {
             id: buttonContainer
             height: 50
-            color: "#ffffff"
+            color: "#00000000"
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom

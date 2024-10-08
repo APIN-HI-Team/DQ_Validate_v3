@@ -7,7 +7,6 @@ import QtQuick.Controls.Material
 import "./UI/Pages"
 import "./UI/Components"
 import "./UI/Utilities"
-import "./UI/Fonts"
 
 Window {
     id: window
@@ -24,10 +23,7 @@ Window {
         id: theme
     }
 
-    // FontLoader {
-    //     id: poppinsFont
-    //     source: "/Fonts/Poppins/Poppins-Regular.ttf"
-    // }
+    // Material.theme: Material.Dark
     Material.primary: theme.primaryColor
     Material.accent: theme.accentColor
 
@@ -71,12 +67,13 @@ Window {
 
     Rectangle {
         id: mainContainer
-        color: "#ffffff"
+        // color: "#ffffff"
         anchors.fill: parent
         anchors.leftMargin: 2
         anchors.rightMargin: 2
         anchors.topMargin: 2
         anchors.bottomMargin: 2
+        color: theme.backgroundColor
 
         Rectangle {
             id: header
@@ -88,7 +85,7 @@ Window {
             anchors.rightMargin: 0
             anchors.topMargin: 0
 
-            color: theme.secondaryColor
+            color: theme.accentColor
 
             Text {
                 id: location
@@ -158,6 +155,7 @@ Window {
             anchors.rightMargin: 0
             anchors.topMargin: 0
 
+            // Material.background: "#323232"
             CustomTabButton {
                 id: tabButton
                 text: qsTr("Generate LineList")

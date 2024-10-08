@@ -67,9 +67,9 @@ Item {
             delegate: Rectangle {
                 width: tableView.columnWidthProvider(index.column)
                 height: tableView.rowHeightProvider(index.row)
-                color: selected ? 'lightblue' : 'white' // Highlight selected item
+                color: selected ? 'lightblue' : theme.backgroundColor // Highlight selected item
                 border.width: 1
-                border.color: 'gray'
+                border.color: theme.primaryBorderColor
 
                 property bool selected: false
 
@@ -77,7 +77,7 @@ Item {
                     text: model.display
                     anchors.fill: parent
                     anchors.margins: 10
-                    color: 'black'
+                    color: theme.bodyTextColor
                     font.pixelSize: 12
                     verticalAlignment: Text.AlignVCenter
                     elide: Text.ElideRight
@@ -133,8 +133,8 @@ Item {
             Rectangle {
                 width: tableView.columnWidthProvider(index)
                 height: horizontalHeader.height
-                color: "#f0f0f0" // Light Excel-like header color
-                border.color: "#c0c0c0" // Border for Excel-like effect
+                color: "#000000" // Light Excel-like header color
+                border.color: theme.accentColor
                 border.width: 1
 
                 Label {
@@ -211,7 +211,7 @@ Item {
         anchors.topMargin: 0
         flat: true
         background: Rectangle {
-            color: theme.primaryColor
+            color: theme.accentColor
         }
         // contentItem: IconImage {
         //     source: "../../build/exe.win-amd64-3.12/lib/bokeh/sampledata/_data/icons/chrome_32x32.png"

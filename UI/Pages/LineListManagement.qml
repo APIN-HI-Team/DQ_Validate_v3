@@ -35,6 +35,7 @@ Pane {
             anchors.right: parent.right
             anchors.leftMargin: 0
             anchors.rightMargin: 0
+            Material.background: "#FFFFFF"
 
             Row {
                 id: row
@@ -71,6 +72,7 @@ Pane {
                 ComboBox {
                     id: selectLineListType
                     anchors.verticalCenter: parent.verticalCenter
+                    flat: true
                     width: 200
                     height: 40
 
@@ -101,8 +103,8 @@ Pane {
                             Text {
                                 text: model.text
                                 font.italic: model.text === "Select Linelist type"
-                                opacity: model.text === "Select Linelist type" ? 0.5 : 1.0
-                                color: comboBoxDelegate.ListView.isCurrentItem ? theme.accentColor : "black"
+                                opacity: model.text === "Select Linelist type" ? 0.5 : 0.6
+                                color: comboBoxDelegate.ListView.isCurrentItem ? theme.accentColor : theme.primaryTextColor
                                 font.bold: comboBoxDelegate.ListView.isCurrentItem
                                 verticalAlignment: Text.AlignVCenter
                                 horizontalAlignment: Text.AlignLeft
@@ -157,7 +159,7 @@ Pane {
                         // Perform actions based on validations
                         if (endDateValid && linelistTypeValid
                                 && (isPatientLinelist || startDateValid)) {
-                            customBusyIndicator.running = true
+                            // customBusyIndicator.running = true
                             core.generate_linelist()
                         } else {
                             // Build list of missing parameters
@@ -192,17 +194,20 @@ Pane {
             anchors.top: pane1.bottom
             anchors.bottom: parent.bottom
             anchors.topMargin: 30
+            Material.background: "#FFFFFF"
 
             ColumnLayout {
                 id: columnLayout
                 visible: false
+                anchors.verticalCenter: emptySectionImage.verticalCenter
+                anchors.right: parent.right
                 anchors.fill: parent
 
                 Rectangle {
                     id: rectangle
                     width: 200
                     height: 50
-                    color: "#ffffff"
+                    color: "transparent"
                     Layout.fillWidth: true
 
                     CustomButton {
@@ -253,12 +258,17 @@ Pane {
                     id: tableViewContainer
                     width: 200
                     height: 200
-                    color: "#ffffff"
+                    visible: true
+                    color: theme.primaryColor
                     Layout.fillWidth: true
                     Layout.fillHeight: true
 
                     CustomTableView {
                         anchors.fill: parent
+                        anchors.leftMargin: 1
+                        anchors.rightMargin: 1
+                        anchors.topMargin: 1
+                        anchors.bottomMargin: 1
                         tableModel: core.dataFrameModel
                     }
                 }
@@ -283,10 +293,28 @@ Pane {
             }
         }
     }
+    function displayErrorMessage(errorMessage) {
+        messageBox.dialogTitle = "Critical !!!"
+        messageBox.dialogMessage = errorMessage
+        messageBox.open()
+    }
 
     Connections {
         target: core
+        function onErrorOccurred(message) {
+            customBusyIndicator.running = false
+            emptySectionImage.visible = true
+            columnLayout.visible = false
+            messageBox.dialogTitle = "Critical !!!"
+            messageBox.dialogMessage = message
+            messageBox.open()
+            // customBusyIndicator.running = false
+            // emptySectionImage.visible = true
+            // columnLayout.visible = false
+            // rectangle.visible = false
+        }
         function onTaskStarted() {
+
             customBusyIndicator.running = true
         }
         function onTaskFinished() {

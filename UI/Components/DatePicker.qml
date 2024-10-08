@@ -29,6 +29,7 @@ Item {
         Rectangle {
             id: container
 
+            // color: "transparent"
             anchors.fill: parent
 
             // TextField component
@@ -36,7 +37,7 @@ Item {
                 id: selectedDate
 
                 visible: true
-                color: theme.accentColor
+                color: theme.primaryTextColor
                 Material.background: theme.backgroundColor
                 anchors.left: parent.left
                 anchors.right: calenderIcon.right
