@@ -161,6 +161,7 @@ Pane {
                                 && (isPatientLinelist || startDateValid)) {
                             // customBusyIndicator.running = true
                             core.generate_linelist()
+                            // rowCount.text = core.errorModel.row_count
                         } else {
                             // Build list of missing parameters
                             var missingParams = []
@@ -182,6 +183,20 @@ Pane {
                             messageBox.open()
                         }
                     }
+                }
+            }
+            Rectangle {
+                id: rectangle1
+                width: 30
+                height: 30
+                color: "#248226"
+                Text {
+                    id: _text
+                    color: "#dd3f8e3a"
+                    text: core.errorModel.row_count
+                    anchors.fill: parent
+                    font.pixelSize: 12
+                    styleColor: "#460e37"
                 }
             }
         }
@@ -213,15 +228,17 @@ Pane {
                     CustomButton {
                         id: showErrorLog
                         x: -12
+                        Material.background: "red"
                         text: qsTr("Show Errors")
                         anchors.verticalCenter: parent.verticalCenter
                         anchors.right: parent.right
                         anchors.rightMargin: 22
 
                         onClicked: {
-                            if (selectLineListType.currentText === "Patient Linelist") {
+                            core.update_errorAggregateTable()
+                            if (core.errorModel.row_count > 0) {
                                 customBusyIndicator.running = true
-                                core.update_errorAggregateTable()
+
                                 customBusyIndicator.running = false
 
                                 stackLayout.currentIndex = 2
@@ -251,6 +268,19 @@ Pane {
                                 messageBox.open()
                             }
                         }
+                    }
+
+                    Text {
+                        id: rowCount
+                        text: qsTr(
+                                  "Row Count: ") + core.dataFrameModel.row_count
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.left: parent.left
+                        anchors.bottom: parent.bottom
+                        anchors.leftMargin: 0
+                        anchors.bottomMargin: 0
+                        font.pixelSize: 12
+                        verticalAlignment: Text.AlignBottom
                     }
                 }
 
@@ -302,25 +332,28 @@ Pane {
     Connections {
         target: core
         function onErrorOccurred(message) {
+
             customBusyIndicator.running = false
-            emptySectionImage.visible = true
-            columnLayout.visible = false
             messageBox.dialogTitle = "Critical !!!"
             messageBox.dialogMessage = message
             messageBox.open()
-            // customBusyIndicator.running = false
-            // emptySectionImage.visible = true
-            // columnLayout.visible = false
-            // rectangle.visible = false
         }
         function onTaskStarted() {
 
             customBusyIndicator.running = true
         }
         function onTaskFinished() {
-            customBusyIndicator.running = false
-            emptySectionImage.visible = false
-            columnLayout.visible = true
+            {
+                customBusyIndicator.running = false
+                emptySectionImage.visible = false
+                columnLayout.visible = true
+            }
         }
+    }
+
+    Text {
+        id: _text1
+        text: qsTr("Text")
+        font.pixelSize: 12
     }
 }

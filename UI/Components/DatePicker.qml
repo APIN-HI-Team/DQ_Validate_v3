@@ -3,8 +3,14 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts 2.15
 import QtQuick.Controls.Material
 
+import "../Utilities"
+
 Item {
     id: customDateWidget
+
+    CalenderModel {
+        id: calendarModel
+    }
 
     implicitWidth: 200
     implicitHeight: 40
@@ -174,6 +180,7 @@ Item {
                         onClicked: {
                             calendarPopup.close()
                             monthPickerPopup.open()
+                            // monthYear.text =
                         }
                     }
                 }
@@ -287,7 +294,8 @@ Item {
                             hoverEnabled: true
                             onEntered: {
                                 parent.color = theme.accentColor
-                                dayText.color = theme.textColor
+                                // dayText.color = theme.textColor
+                                dayText.color = "#FFFFFF"
                             }
                             onExited: {
                                 parent.color = "transparent"
@@ -301,13 +309,13 @@ Item {
                                 var year = modelData.year
 
                                 if (modelData.isNextMonth) {
-                                    month = (month % 12) + 1
+                                    month = (month % 12)
                                     if (month === 1)
-                                        year++
+                                        (year + 1) - 1
                                 } else if (modelData.isPrevMonth) {
-                                    month = (month - 1 + 12) % 12 + 1
+                                    month = (month - 1) % 12 + 1
                                     if (month === 12)
-                                        year--
+                                        year - 1
                                 }
 
                                 var formattedDay = day < 10 ? "0" + day : day
@@ -402,9 +410,24 @@ Item {
                         MouseArea {
                             anchors.fill: parent
                             hoverEnabled: true
-                            onEntered: yearName.color = theme.accentColor
-                            onExited: yearName.color = "#000000"
-                            onClicked: yearPopup.open()
+
+                            // onEntered: yearName.color = theme.accentColor
+                            // onExited: yearName.color = "#000000"
+                            onEntered: {
+                                parent.color = theme.accentColor
+                                // dayText.color = theme.textColor
+                                dayText.color = "#FFFFFF"
+                            }
+                            onExited: {
+                                parent.color = "transparent"
+                                // yearName.color = modelData.isNextMonth
+                                //         || modelData.isPrevMonth ? "#e0e0e0" : "#ffffff"
+                                yearName.color = theme.bodyTextColor
+                            }
+                            onClicked: {
+                                yearPopup.open()
+                                // yearName.text = calendarModel.year
+                            }
                         }
                     }
 
@@ -525,7 +548,8 @@ Item {
                                 hoverEnabled: true
                                 onEntered: {
                                     parent.color = theme.accentColor
-                                    monthText.color = theme.textColor
+                                    // monthText.color = theme.textColor
+                                    monthText.color = "#FFFFFF"
                                 }
                                 onExited: {
                                     parent.color = "transparent"
@@ -534,13 +558,22 @@ Item {
                                 }
 
                                 onClicked: {
-                                    let monthIndex = index + 1
-                                    calendarModel.month = monthIndex
-                                    calendarModel.updateDaysInMonth()
-                                    monthPickerPopup.close()
-                                    calendarPopup.open(
-                                                ) // Open the calendar popup
+                                    calendarModel.month = index + 1 // Update month based on index
+                                    calendarModel.updateDaysInMonth(
+                                                ) // Refresh days
+                                    monthPickerPopup.close(
+                                                ) // Close month picker
+                                    calendarPopup.open() // Open calendar popup
                                 }
+
+                                // onClicked: {
+                                //     let monthIndex = index + 1
+                                //     calendarModel.month = monthIndex
+                                //     calendarModel.updateDaysInMonth()
+                                //     monthPickerPopup.close()
+                                //     calendarPopup.open(
+                                //                 ) // Open the calendar popup
+                                // }
                             }
                         }
                     }
@@ -552,85 +585,6 @@ Item {
                     Layout.fillWidth: true
                 }
             }
-        }
-    }
-
-    // Custom CalendarModel to handle date logic
-    ListModel {
-        id: calendarModel
-        property int year: new Date().getFullYear()
-        property int month: new Date().getMonth() + 1
-        property string monthName: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][month - 1]
-        property int firstDayOfWeek: (new Date(year, month - 1, 1).getDay(
-                                          ) + 6) % 7 // Adjust so Monday is the first day
-        property var daysInMonthArray: []
-
-        function updateDaysInMonth() {
-            var days = []
-            var date = new Date(year, month, 0).getDate(
-                        ) // Number of days in the current month
-            var lastDayOfWeek = (new Date(year, month, 0).getDay() + 6)
-                    % 7 // Day of the week for the last day of the current month
-            var firstDay = (new Date(year, month - 1, 1).getDay(
-                                ) + 6) % 7 // Adjust so Monday is the first day
-
-            // Add gray days from the previous month
-            var prevMonthDays = new Date(year, month - 1, 0).getDate()
-            var prevMonth = (month - 2 + 12) % 12 + 1
-            var prevYear = month === 1 ? year - 1 : year
-            for (var i = prevMonthDays - firstDay + 1; i <= prevMonthDays; i++) {
-                days.push({
-                              "day": i,
-                              "color": "gray",
-                              "isPrevMonth": true,
-                              "isNextMonth": false,
-                              "month": prevMonth,
-                              "year": prevYear
-                          })
-            }
-
-            // Add days for the current month
-            for (var i = 1; i <= date; i++) {
-                days.push({
-                              "day": i,
-                              "color": "black",
-                              "isPrevMonth": false,
-                              "isNextMonth": false,
-                              "month": month,
-                              "year": year
-                          })
-            }
-
-            // Add gray days for the next month
-            for (var i = 1; days.length % 7 !== 0; i++) {
-                days.push({
-                              "day": i,
-                              "color": "gray",
-                              "isPrevMonth": false,
-                              "isNextMonth": true,
-                              "month": (month % 12) + 1,
-                              "year": month === 12 ? year + 1 : year
-                          })
-            }
-
-            daysInMonthArray = days
-        }
-
-        Component.onCompleted: {
-            updateDaysInMonth()
-        }
-
-        function changeMonth(offset) {
-            month += offset
-            if (month < 1) {
-                month = 12
-                year--
-            } else if (month > 12) {
-                month = 1
-                year++
-            }
-            monthName = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][month - 1]
-            updateDaysInMonth()
         }
     }
 
@@ -678,14 +632,14 @@ Item {
                     anchors.bottom: parent.bottom
                     anchors.topMargin: 0
                     anchors.bottomMargin: 0
-                    onClicked: calendarModel2.changeYear(-10)
+                    onClicked: calendarModel.changeYear(-10)
                     width: 40
                     flat: true
                 }
 
                 Text {
                     id: yearRange
-                    text: calendarModel2.startYear + " - " + calendarModel2.endYear
+                    text: calendarModel.startYear + " - " + calendarModel.endYear
                     anchors.verticalCenter: parent.verticalCenter
                     font.pixelSize: 18
                     font.bold: true
@@ -710,7 +664,7 @@ Item {
                     anchors.bottom: parent.bottom
                     anchors.topMargin: 0
                     anchors.bottomMargin: 0
-                    onClicked: calendarModel2.changeYear(10)
+                    onClicked: calendarModel.changeYear(10)
                     width: 40
                     flat: true
                 }
@@ -729,12 +683,12 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
 
                 Repeater {
-                    model: calendarModel2.yearsInRange
+                    model: calendarModel.yearsInRange
 
                     Rectangle {
                         width: 50
                         height: 50
-                        color: modelData.year === calendarModel2.currentYear.toString(
+                        color: modelData.year === calendarModel.currentYear.toString(
                                    ) ? theme.accentColor : "#ffffff"
                         radius: 5
 
@@ -742,10 +696,10 @@ Item {
                             id: yearText
                             text: modelData.year
                             anchors.centerIn: parent
-                            color: (modelData.year === calendarModel2.startYear.toString()
-                                    || modelData.year === calendarModel2.endYear.toString(
+                            color: (modelData.year === calendarModel.startYear.toString()
+                                    || modelData.year === calendarModel.endYear.toString(
                                         )) ? "gray" : (modelData.year
-                                                       === calendarModel2.currentYear.toString(
+                                                       === calendarModel.currentYear.toString(
                                                            ) ? "#ffffff" : "#000000")
 
                             font.pixelSize: 14
@@ -760,65 +714,23 @@ Item {
                             }
                             onExited: {
                                 parent.color = modelData.year
-                                        === calendarModel2.currentYear.toString(
+                                        === calendarModel.currentYear.toString(
                                             ) ? theme.accentColor : "#ffffff"
                                 yearText.color
-                                        = (modelData.year === calendarModel2.startYear.toString()
-                                           || modelData.year === calendarModel2.endYear.toString(
-                                               )) ? "gray" : (modelData.year === calendarModel2.currentYear.toString(
+                                        = (modelData.year === calendarModel.startYear.toString()
+                                           || modelData.year === calendarModel.endYear.toString(
+                                               )) ? "gray" : (modelData.year === calendarModel.currentYear.toString(
                                                                   ) ? "#ffffff" : "#000000")
                             }
                             onClicked: {
                                 // selectedDate.text = modelData.year
                                 yearPopup.close()
                                 monthPickerPopup.open()
-                                // customDateWidget.customDateChanged(
-                                //             selectedDate.text)
+                                calendarModel.year = yearText.text
                             }
                         }
                     }
                 }
-            }
-        }
-
-        // Calendar Model
-        QtObject {
-            id: calendarModel2
-            property int currentYear: new Date().getFullYear()
-            property int startYear: Math.floor((currentYear - 1) / 10) * 10 - 1
-            property int endYear: startYear + 11
-            property var yearsInRange: generateYearsInRange()
-
-            function generateYearsInRange() {
-                var years = []
-                for (var year = startYear; year <= endYear; year++) {
-                    years.push({
-                                   "year": year.toString()
-                               })
-                }
-                return years
-            }
-
-            function changeYear(offset) {
-                if (offset > 0) {
-                    // Forward navigation
-                    if (endYear) {
-                        startYear = endYear - 1 // Set startYear to the current endYear - 1
-                        endYear = startYear + 11 // Set endYear to maintain a 12-year range
-                    }
-                } else if (offset < 0) {
-                    // Backward navigation
-                    if (endYear) {
-                        endYear = startYear + 1 // Set endYear to the previous start year
-                        startYear = endYear - 11 // Subtract 11 to get the previous startYear
-                    }
-                }
-
-                // Regenerate the years array based on the new startYear and endYear
-                yearsInRange = generateYearsInRange()
-
-                // Update yearRange text after changing year range
-                yearRange.text = (startYear + 1) + " - " + (startYear + 10)
             }
         }
     }

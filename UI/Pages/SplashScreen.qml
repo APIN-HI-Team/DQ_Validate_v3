@@ -17,7 +17,7 @@ Rectangle {
         source: "../Media/Images/rm373batch15-bg-11.jpg"
         anchors.horizontalCenter: parent.horizontalCenter
         // Replace with the actual path to your logo
-        fillMode: Image.Stretch
+        fillMode: Image.Pad
     }
 
     Text {

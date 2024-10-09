@@ -1,8 +1,8 @@
 
 # Please Edit start and end dates (e.g @startDate ='2021-11-01'  and @endDate = '2021-11-31') in this format YYYY-MM-DD;
 
-SET @startDate := 'DatePicker_QMLTYPE_74(0x224f0e55d10)';
-SET @endDate := '2024-10-05';
+SET @startDate := '';
+SET @endDate := '2024-09-30';
 
 
 DROP TABLE  IF EXISTS `lims_sam`;

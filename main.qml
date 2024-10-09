@@ -149,6 +149,7 @@ Window {
             x: 20
             y: 30
             width: 400
+            visible: false
             anchors.left: parent.left
             anchors.top: header.bottom
             anchors.leftMargin: 20

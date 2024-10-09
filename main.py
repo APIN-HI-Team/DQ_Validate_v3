@@ -41,30 +41,29 @@ logger.addHandler(stream_handler)
 
 
 
-class Worker(QObject):
+class Worker(QThread):
     taskStarted = Signal()
     taskFinished = Signal()
     dataReady = Signal(pd.DataFrame)
-
     errorOccurred = Signal(str)
 
-    def __init__(self, runner: MySQLRunner):
-        super().__init__()
-       
+    def __init__(self, runner: 'MySQLRunner', parent=None):
+        super().__init__(parent)
         self.runner = runner
         self._error_message = ""
-        
+        self.df = None
+        self.sql_file = ""
+
     @Property(str, notify=errorOccurred)
     def error_message(self):
-        return self._error_message    
+        return self._error_message
 
-    # @Slot()
-    def run(self, sql_file: str):
+    def run(self):
         try:
             self.taskStarted.emit()
 
             # Convert directly to Polars DataFrame
-            self.df = self.runner.execute_sql_file_and_read_to_pandas(sql_file)
+            self.df = self.runner.execute_sql_file_and_read_to_pandas(self.sql_file)
 
             if self.df is None or self.df.empty:
                 raise ValueError("No data returned from SQL execution.")
@@ -76,10 +75,15 @@ class Worker(QObject):
         except Exception as e:
             self._error_message = self.runner.sql_error()
             logging.error("Worker error: %s", self.error_message)
-            self.errorOccurred.emit(self.error_message.split("': ")[1].strip())
+            self.errorOccurred.emit(self.error_message)
 
         finally:
-            self.taskFinished.emit()
+            if not self._error_message:  # Only emit if no error occurred
+                self.taskFinished.emit()
+
+    def set_sql_file(self, sql_file: str):
+        self.sql_file = sql_file
+
 
 
 class Core(QObject):
@@ -99,7 +103,8 @@ class Core(QObject):
 
     setScriptPath = Signal(str, str)
 
-    exportSuccessSignal = Signal(str) 
+    exportSuccessSignal = Signal(str)
+    exportErrorLogSignal = Signal(str) 
 
 
     def __init__(self):
@@ -118,8 +123,12 @@ class Core(QObject):
         self._location = self.load_location()
            
         
-        self.worker_thread = QThread(self)
+  
         self.worker = Worker(self.runner)
+        self.worker.taskStarted.connect(self.on_task_started)
+        self.worker.taskFinished.connect(self.on_task_finished)
+        self.worker.dataReady.connect(self.handle_data_ready)
+        self.worker.errorOccurred.connect(self.handle_error)
 
         self.project_folder = self.create_project_folder()
         self.create_location_sql_file()
@@ -132,10 +141,10 @@ class Core(QObject):
     def start_task(self, linelist_type):
         
         # Ensure no existing worker or thread is running
-        if self.worker_thread.isRunning():
-            logging.warning("Thread is already running. Please wait.")
-            # self.cleanup_thread()
-            return
+        # if self.worker_thread.isRunning():
+        #     logging.warning("Thread is already running. Please wait.")
+        #     # self.cleanup_thread()
+        #     return
         
         # Map linelist types to file paths
         linelist_map = {
@@ -155,19 +164,20 @@ class Core(QObject):
 
         # Initialize the worker and move it to the thread
         # self.worker = Worker(self.runner)
-        self.worker.moveToThread(self.worker_thread)
+        # self.worker.moveToThread(self.worker_thread)
 
         # Connect worker signals to appropriate slots
-        self.worker.taskStarted.connect(self.on_task_started)
-        self.worker.taskFinished.connect(self.on_task_finished)
-        self.worker.dataReady.connect(self.handle_data_ready)
-        self.worker.errorOccurred.connect(self.handle_error)
+        # self.worker.taskStarted.connect(self.on_task_started)
+        # self.worker.taskFinished.connect(self.on_task_finished)
+        # self.worker.dataReady.connect(self.handle_data_ready)
+        # self.worker.errorOccurred.connect(self.handle_error)
 
         # Start the worker task when the thread starts
-        self.worker_thread.started.connect(self.worker.run(sql_file_path))
-        
-         # Start the thread
-        self.worker_thread.start()
+        if not self.worker.isRunning():
+            self.worker.set_sql_file(sql_file_path)
+            self.worker.start()
+        else:
+            logging.warning("Worker thread is already running.")
        
 
     def _initialize_models(self):
@@ -264,9 +274,13 @@ class Core(QObject):
 
     
     def cleanup_thread(self):
-        if self.worker_thread.isRunning():
-            self.worker_thread.quit()
-            self.worker_thread.wait()
+    # Check if worker_thread exists and is not None
+        if hasattr(self, 'worker_thread') and self.worker_thread is not None:
+            if self.worker_thread.isRunning():
+                # Stop or join the thread
+                self.worker_thread.quit()  # or self.worker_thread.join()
+
+                self.worker_thread.wait()
 
     @Slot()
     def generate_linelist(self):
@@ -391,13 +405,14 @@ class Core(QObject):
                 )
                 # print(dff)
 
+                self.df_ = self.df_.with_columns(
+                    [ pl.col(column).cast(pl.Utf8) for column in self.df_.columns] )
+
                 # Data type conversion
-                # self.df_ = self.df_.with_columns(
-                #     [pl.col(col).str.strptime(pl.Date, "%d/%m/%Y", strict=False).alias(col) for col in columns_to_convert] +
-                #     [pl.col(col).cast(pl.Int64, strict=False).alias(col) for col in number_convert] +
-                #     [pl.col(col).cast(pl.Utf8).alias(col)
-                #      for col in string_convert] +  [pl.col(col).cast(pl.Float64, strict=False).alias(col) for col in float_convert]
-                # )
+                self.df_ = self.df_.with_columns(
+                    [pl.col(col).cast(pl.Int64, strict=False).alias(col) for col in number_convert] +
+                    [pl.col(col).str.strptime(pl.Date, "%d/%m/%Y", strict=False).alias(col) for col in columns_to_convert] +  [pl.col(col).cast(pl.Float64, strict=False).alias(col) for col in float_convert]
+                )
 
                 # Common filter conditions
                 common_columns = ["IP", "State", "LGA",
@@ -487,8 +502,12 @@ class Core(QObject):
                         print(f"Skipped empty DataFrame for error type '{
                               value['error_type']}'.")
 
+            self.exportErrorLogSignal.emit(f"Errors exported successfully to {full_file_path}_{self.end_date}")
+            logging.info("Error exported Successfully !!!")
         except Exception as e:
-            logging.error(f"Error during export: {str(e)}")
+            error_message = f"Error during export: {str(e)}"
+            logging.error(error_message)
+            self.exportErrorLogSignal.emit(error_message)
       
     ################### LINELIST SETTINGS####################
 

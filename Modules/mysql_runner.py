@@ -1,3 +1,4 @@
+import os
 import subprocess
 from io import StringIO
 import time
@@ -25,7 +26,9 @@ class MySQLRunner:
     def __init__(self, user: str, host: str = 'localhost', database: str = '', password: str = 'Nu66et'):
         self.user = user
         self.host = host
-        self.password = password
+        self.password = 'Nu66et' or os.getenv('MYSQL_PASSWORD')  # Retrieve from environment variable
+        if not self.password:
+            raise ValueError("MySQL password not set.")
         self.database = database
         self.error_message = ""
         self.mysql_client_path = self.get_mysql_client_path()  # Cache the MySQL client path
@@ -106,7 +109,7 @@ class MySQLRunner:
 
                 cleaned_output = '\n'.join(cleaned_output.splitlines()[1:])
 
-                df = pd.read_csv(StringIO(cleaned_output), sep='\t', header=None, engine='python', encoding='utf-8')
+                df = pd.read_csv(StringIO(cleaned_output), sep='\t')
 
                 if not df.empty and len(df.columns) == len(column_names):
                     df.columns = column_names

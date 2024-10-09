@@ -1,5 +1,6 @@
 {
     "files": [
+        "UI/Components/CustomBadge.qml",
         "UI/Components/CustomBusyIndicator.qml",
         "UI/Components/CustomButton.qml",
         "UI/Components/CustomFileDialog.qml",
@@ -16,6 +17,7 @@
         "UI/Pages/LineListManagement.qml",
         "UI/Pages/Settings.qml",
         "UI/Pages/SplashScreen.qml",
+        "UI/Utilities/CalenderModel.qml",
         "UI/Utilities/GlobalTheme.qml",
         "main.py",
         "main.qml"

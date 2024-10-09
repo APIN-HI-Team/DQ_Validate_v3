@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Controls.Imagine
+
 import "../utilities"
 import "."
 
@@ -9,6 +10,8 @@ Item {
     id: _item
     anchors.fill: parent
     property var tableModel: null
+
+    // Material.foreground: theme.bodyTextColor
 
     // ScrollView to handle table scrolling
     ScrollView {
@@ -62,8 +65,8 @@ Item {
                 Rectangle {
                     id: backgroundRectangle
                     anchors.fill: parent
-                    color: "#e9e4d8"
-                    border.color: "gray"
+                    color: theme.backgroundColor
+                    border.color: theme.primaryBorderColor
                     border.width: 1
                 }
 
@@ -75,13 +78,14 @@ Item {
                     fillMode: Image.PreserveAspectFit
                     horizontalAlignment: Image.AlignHCenter
                     verticalAlignment: Image.AlignVCenter
+
                     // source: "../../images/icons/icons8-eye-48.png"
                     sourceSize.height: 24
                     sourceSize.width: 24
                 }
                 function updateIcon() {
                     if (column === 2) {
-                        return backgroundImage.source = "../../images/icons/icons8-eye-48.png"
+                        return backgroundImage.source = "../Media/Icons/icons8-show-48.png"
                     } else {
                         return backgroundImage.source = ""
                     }
@@ -101,20 +105,16 @@ Item {
                             // Get the row index of the clicked cell
                             var rowIndex = row
 
-                            // Retrieve the data from column 1 of the same row
                             var cellDataColumn1 = tableModel.data(
                                         tableView.index(rowIndex, 0),
                                         Qt.DisplayRole).toString()
 
-                            // // Log the data for debugging
-                            // console.log("Clicked on cell at row:",
-                            //             rowIndex, "Data in column 0:",
-                            //             cellDataColumn1)
                             core.openFilteredDF(cellDataColumn1)
 
                             errorDF.tableModel = core.errorDataFrameModel
 
                             // modal.dialogTitle = cellDataColumn1
+                            modal.title = cellDataColumn1
                             modal.open()
                         }
                     }
@@ -124,8 +124,10 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     text: model.display
+                    color: theme.primaryTextColor
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
+                    font.bold: true
                 }
             }
         }
@@ -226,10 +228,6 @@ Item {
         anchors.top: parent.top
         anchors.leftMargin: 0
         anchors.topMargin: 0
-
-        // contentItem: IconImage {
-        //     source: "../../build/exe.win-amd64-3.12/lib/bokeh/sampledata/_data/icons/chrome_32x32.png"
-        // }
     }
 
     Dialog {
@@ -237,8 +235,9 @@ Item {
         x: 27
         y: 27
         anchors.centerIn: parent
-        width: parent.width * 0.9
-        height: parent.height * 0.9
+        width: parent.width * 0.7
+        height: parent.height * 0.6
+        title: qsTr("gh")
 
         // Material.roundedScale: Material.NotRounded
         CustomTableView {
