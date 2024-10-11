@@ -411,8 +411,6 @@ Item {
                             anchors.fill: parent
                             hoverEnabled: true
 
-                            // onEntered: yearName.color = theme.accentColor
-                            // onExited: yearName.color = "#000000"
                             onEntered: {
                                 parent.color = theme.accentColor
                                 // dayText.color = theme.textColor
@@ -420,8 +418,7 @@ Item {
                             }
                             onExited: {
                                 parent.color = "transparent"
-                                // yearName.color = modelData.isNextMonth
-                                //         || modelData.isPrevMonth ? "#e0e0e0" : "#ffffff"
+
                                 yearName.color = theme.bodyTextColor
                             }
                             onClicked: {
@@ -688,7 +685,7 @@ Item {
                     Rectangle {
                         width: 50
                         height: 50
-                        color: modelData.year === calendarModel.currentYear.toString(
+                        color: modelData.year === calendarModel.year.toString(
                                    ) ? theme.accentColor : "#ffffff"
                         radius: 5
 
@@ -696,12 +693,12 @@ Item {
                             id: yearText
                             text: modelData.year
                             anchors.centerIn: parent
+
                             color: (modelData.year === calendarModel.startYear.toString()
                                     || modelData.year === calendarModel.endYear.toString(
                                         )) ? "gray" : (modelData.year
-                                                       === calendarModel.currentYear.toString(
+                                                       === calendarModel.year.toString(
                                                            ) ? "#ffffff" : "#000000")
-
                             font.pixelSize: 14
                         }
 
@@ -713,17 +710,16 @@ Item {
                                 yearText.color = "#ffffff"
                             }
                             onExited: {
-                                parent.color = modelData.year
-                                        === calendarModel.currentYear.toString(
-                                            ) ? theme.accentColor : "#ffffff"
+                                parent.color = "#FFFFFF"
                                 yearText.color
                                         = (modelData.year === calendarModel.startYear.toString()
                                            || modelData.year === calendarModel.endYear.toString(
-                                               )) ? "gray" : (modelData.year === calendarModel.currentYear.toString(
+                                               )) ? "gray" : (modelData.year
+                                                              === calendarModel.year.toString(
                                                                   ) ? "#ffffff" : "#000000")
                             }
                             onClicked: {
-                                // selectedDate.text = modelData.year
+
                                 yearPopup.close()
                                 monthPickerPopup.open()
                                 calendarModel.year = yearText.text

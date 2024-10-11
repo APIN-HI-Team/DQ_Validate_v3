@@ -3,6 +3,7 @@
         "UI/Components/CustomBadge.qml",
         "UI/Components/CustomBusyIndicator.qml",
         "UI/Components/CustomButton.qml",
+        "UI/Components/CustomDialog.qml",
         "UI/Components/CustomFileDialog.qml",
         "UI/Components/CustomMessageDialog.qml",
         "UI/Components/CustomPane.qml",

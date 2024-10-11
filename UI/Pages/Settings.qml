@@ -7,7 +7,8 @@ import "../Components"
 
 Rectangle {
     id: settingsPage
-    color: "#e4f1e7"
+    color: theme.backgroundColor
+    Material.foreground: theme.primaryTextColor
 
     Label {
         id: label

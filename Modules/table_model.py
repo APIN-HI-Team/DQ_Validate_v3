@@ -138,7 +138,7 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         """
         if dataframe is None or not isinstance(dataframe, pd.DataFrame):
             return pd.DataFrame()  # Return empty dataframe
-        return dataframe.fillna('')  # Replace None/NaN values with empty strings
+        return dataframe.fillna('').astype(str)  # Replace None/NaN values with empty strings
 
     @QtCore.Slot(int, QtCore.Qt.Orientation, result=str)
     def headerData(self, section: int, orientation: QtCore.Qt.Orientation, role: int = QtCore.Qt.DisplayRole) -> str:

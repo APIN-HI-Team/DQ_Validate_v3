@@ -2,6 +2,7 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 2.15
 import "../Components"
+import QtQuick.Controls.Material
 
 Pane {
     id: errorLogTable
@@ -27,12 +28,19 @@ Pane {
             id: backToLineListGenerationPage
             x: -9
             y: -35
-            width: 40
+            width: 64
             text: qsTr("back")
             anchors.verticalCenter: parent.verticalCenter
             anchors.left: parent.left
-            anchors.leftMargin: 0
+            anchors.leftMargin: 20
+            icon.height: 36
+            icon.width: 36
+            highlighted: true
+            icon.color: "#00000000"
+            icon.source: "../Media/Icons/icons8-back-64.png"
+            display: AbstractButton.IconOnly
             flat: true
+            Material.background: "#00000000"
             onClicked: {
 
                 stackLayout.currentIndex = 0
@@ -43,8 +51,8 @@ Pane {
             id: exportErrorsToCSV
             x: -49
             y: -35
-            width: 40
-            text: qsTr("Export Errors")
+            width: 100
+            text: qsTr("Export")
             anchors.verticalCenter: parent.verticalCenter
             anchors.right: parent.right
             anchors.rightMargin: 0
@@ -77,6 +85,7 @@ Pane {
         function onExportErrorLogSignal(message) {
             exportMessageBox.dialogTitle = "Success !!!"
             exportMessageBox.dialogMessage = message
+            exportMessageBox.x = parent.width / 2
             exportMessageBox.open()
         }
     }

@@ -185,19 +185,22 @@ Pane {
                     }
                 }
             }
-            Rectangle {
-                id: rectangle1
-                width: 30
-                height: 30
-                color: "#248226"
-                Text {
-                    id: _text
-                    color: "#dd3f8e3a"
-                    text: core.errorModel.row_count
-                    anchors.fill: parent
-                    font.pixelSize: 12
-                    styleColor: "#460e37"
-                }
+
+            Text {
+                id: _text
+                y: 0
+                color: "#801c0e"
+                text: "Select the relevant parameters before generating LineList"
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 22
+                font.pixelSize: 16
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignTop
+                font.underline: true
+                renderType: Text.QtRendering
+                anchors.horizontalCenter: parent.horizontalCenter
+                font.italic: true
+                styleColor: "#460e37"
             }
         }
 
@@ -349,11 +352,5 @@ Pane {
                 columnLayout.visible = true
             }
         }
-    }
-
-    Text {
-        id: _text1
-        text: qsTr("Text")
-        font.pixelSize: 12
     }
 }

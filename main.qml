@@ -11,7 +11,7 @@ import "./UI/Utilities"
 Window {
     id: window
     width: 1250
-    height: 600
+    height: 800
     visible: true
     visibility: Window.Maximized
     flags: Qt.Window

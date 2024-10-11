@@ -246,6 +246,8 @@ class Core(QObject):
     def handle_data_ready(self, df: pd.DataFrame):
         logging.info("Data received")
         self.df = df
+        if self.linelist_type == 'Patient Linelist':
+            self.df = self.df[self.df['IP'] == 'APIN']
         self._dataFrameModel.setDataFrame(self.df)
         self.cleanup_thread()
 
@@ -346,7 +348,7 @@ class Core(QObject):
                                   "Peer_To_Peer_Mentoship", "Role_of_OTZ", "OTZ_Champion_Oreintation"]
 
                 # Create 'Unique_ID' column
-                self.df["Unique_ID"] = self.df["Datim_Code"].astype(str) + "_" + self.df["PepID"].astype(str)
+                self.df.loc[:,"Unique_ID"] = self.df["Datim_Code"].astype(str) + "_" + self.df["PepID"].astype(str)
 
                 # Register temporary DataFrame in DuckDB
                 temp_df = self.df[["Unique_ID", "State", "LGA", "Datim_Code", "PepID", "ARTStartDate", "Surname", "Firstname"]]
@@ -381,10 +383,10 @@ class Core(QObject):
                 dff = id_df[~id_df["Unique_ID"].isin(self.df["Unique_ID"]) & id_df["Datim_Code"].isin(self.df["Datim_Code"])]
 
                 # Data type conversion
-                self.df[number_convert] = self.df[number_convert].apply(pd.to_numeric, errors="coerce")
-                self.df[float_convert] = self.df[float_convert].apply(pd.to_numeric, errors="coerce")
-                self.df[columns_to_convert] = self.df[columns_to_convert].apply(pd.to_datetime, errors="coerce", format="%d/%m/%Y")
-                self.df[string_convert] = self.df[string_convert].astype(str)
+                self.df.loc[:,number_convert] = self.df[number_convert].apply(pd.to_numeric, errors="coerce")
+                self.df.loc[:,float_convert] = self.df[float_convert].apply(pd.to_numeric, errors="coerce")
+                self.df.loc[:,columns_to_convert] = self.df[columns_to_convert].apply(pd.to_datetime, errors="coerce", format="%d/%m/%Y")
+                self.df.loc[:,string_convert] = self.df[string_convert].astype('object').fillna('').astype(str)
 
                 # Common filter conditions
                 common_columns = ["IP", "State", "LGA", "Datim_Code", "FacilityName", "PepID"]
@@ -447,39 +449,45 @@ class Core(QObject):
         # Log a warning if no matching error_type was found
         logging.warning(f"No filter defined for error type: {error_type}")
 
-
-
-
     @Slot()
     def exportErrorsToExcel(self):
         # Implement the logic to export the DataFrame to Excel
         try:
-            downloads_path = os.path.join(
-                os.path.expanduser("~"), "Downloads")
+            downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
             full_file_path = os.path.join(downloads_path, 'Error_Log.xlsx')
-
-            with pd.ExcelWriter('Error_Log.xlsx', engine='openpyxl') as writer:
+    
+            # Initialize a flag to track if we have any valid sheets
+            has_valid_sheets = False
+    
+            with pd.ExcelWriter(full_file_path, engine='openpyxl') as writer:
                 for key, value in self.precomputed_filters.items():
-                    df = value['error_df'].to_pandas()
-
+                    df = value['error_df']  # Assuming error_df is already a Pandas DataFrame
+    
                     # Check if DataFrame is empty
                     if not df.empty:
                         # Excel sheet names must be 31 chars or less
                         sheet_name = value['error_type'][:31]
                         df.to_excel(writer, sheet_name=sheet_name, index=False)
-                        print(f"Written sheet '{
-                              sheet_name}' to the Excel workbook.")
+                        has_valid_sheets = True  # Set flag to True
+                        print(f"Written sheet '{sheet_name}' to the Excel workbook.")
                     else:
-                        print(f"Skipped empty DataFrame for error type '{
-                              value['error_type']}'.")
-
-            self.exportErrorLogSignal.emit(f"Errors exported successfully to {full_file_path}_{self.end_date}")
-            logging.info("Error exported Successfully !!!")
+                        print(f"Skipped empty DataFrame for error type '{value['error_type']}'.")
+    
+            # Check if any sheets were written to the workbook
+            if has_valid_sheets:
+                self.exportErrorLogSignal.emit(f"Errors exported successfully to {full_file_path}")
+                logging.info("Error exported Successfully !!!")
+            else:
+                error_message = "No valid data to export."
+                logging.warning(error_message)
+                self.exportErrorLogSignal.emit(error_message)
+    
         except Exception as e:
             error_message = f"Error during export: {str(e)}"
             logging.error(error_message)
             self.exportErrorLogSignal.emit(error_message)
-      
+  
+
     ################### LINELIST SETTINGS####################
 
     def create_project_folder(self):

@@ -230,16 +230,16 @@ Item {
         anchors.topMargin: 0
     }
 
-    Dialog {
+    CustomDialog {
         id: modal
         x: 27
         y: 27
         anchors.centerIn: parent
         width: parent.width * 0.7
-        height: parent.height * 0.6
-        title: qsTr("gh")
+        height: parent.height * 0.9
+        rightPadding: 5
+        leftPadding: 5
 
-        // Material.roundedScale: Material.NotRounded
         CustomTableView {
             id: errorDF
             visible: true

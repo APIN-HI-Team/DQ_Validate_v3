@@ -83,7 +83,7 @@ class MySQLRunner:
         try:
             # Use StringIO to convert the output to a file-like object
             data = pd.read_csv(StringIO(output), sep='\t', lineterminator='\n', on_bad_lines='skip')
-            data = data[data['IP'] == 'APIN']
+            # data = data[data['ip'] == 'APIN']
             return data
         except Exception as e:
             print(f"Error converting SQL output to DataFrame: {e}")
