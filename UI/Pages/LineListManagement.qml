@@ -103,7 +103,7 @@ Pane {
                             Text {
                                 text: model.text
                                 font.italic: model.text === "Select Linelist type"
-                                opacity: model.text === "Select Linelist type" ? 0.5 : 0.6
+                                opacity: model.text === "Select Linelist type" ? 0.5 : 1.0
                                 color: comboBoxDelegate.ListView.isCurrentItem ? theme.accentColor : theme.primaryTextColor
                                 font.bold: comboBoxDelegate.ListView.isCurrentItem
                                 verticalAlignment: Text.AlignVCenter

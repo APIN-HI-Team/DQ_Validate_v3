@@ -104,11 +104,11 @@ class Core(QObject):
     setScriptPath = Signal(str, str)
 
     exportSuccessSignal = Signal(str)
-    exportErrorLogSignal = Signal(str) 
+    exportErrorLogSignal = Signal(str)
 
 
     def __init__(self):
-        super().__init__() 
+        super().__init__()
         self.runner = MySQLRunner(user='root', host='localhost', database='openmrs')
         self.runner.get_mysql_version()
 
@@ -119,8 +119,9 @@ class Core(QObject):
        
         self._initialize_models()
 
-       
+
         self._location = self.load_location()
+
            
         
   
@@ -140,12 +141,6 @@ class Core(QObject):
         
     def start_task(self, linelist_type):
         
-        # Ensure no existing worker or thread is running
-        # if self.worker_thread.isRunning():
-        #     logging.warning("Thread is already running. Please wait.")
-        #     # self.cleanup_thread()
-        #     return
-        
         # Map linelist types to file paths
         linelist_map = {
             "Patient Linelist": ("Patient_Linelist", "patient_linelist"),
@@ -162,15 +157,7 @@ class Core(QObject):
 
         print(f'file path: {sql_file_path}')
 
-        # Initialize the worker and move it to the thread
-        # self.worker = Worker(self.runner)
-        # self.worker.moveToThread(self.worker_thread)
-
-        # Connect worker signals to appropriate slots
-        # self.worker.taskStarted.connect(self.on_task_started)
-        # self.worker.taskFinished.connect(self.on_task_finished)
-        # self.worker.dataReady.connect(self.handle_data_ready)
-        # self.worker.errorOccurred.connect(self.handle_error)
+        
 
         # Start the worker task when the thread starts
         if not self.worker.isRunning():
@@ -199,16 +186,12 @@ class Core(QObject):
         QTimer.singleShot(3000, self.perform_initialization)
 
     def perform_initialization(self):
-        # self.config_handler = ConfigHandler('config.cfg')
-        # self.date_manager = DateManager(self.config_handler)
-        # self._location = self.load_location()
         self.splashScreenVisible.emit(False)
 
 
     def load_location(self) -> str:
         try:
-            location = self.runner.execute_sql_file_and_read_to_pandas(
-                r'sql_scripts/location.sql')
+            location = self.runner.execute_sql_file_and_read_to_pandas(r'sql_scripts/location.sql')
             if not location.empty:
                 loc_name = location['name'][0]
                 loc_city = location['city_village'][0]
@@ -327,10 +310,9 @@ class Core(QObject):
     @Slot()
     def update_errorAggregateTable(self):
         logging.info("Updating error aggregate table...")
-        self.df_ = pl.from_pandas(self.df)
-        if not self.df_.is_empty() and self.linelist_type == "Patient Linelist":
-            try:
 
+        if not self.df.empty and self.linelist_type == "Patient Linelist":
+            try:
                 # Columns for data type conversion
                 columns_to_convert = [
                     "ARTStartDate", "Clinic_Visit_Lastdate", "Date_Transfered_In", "DateofCurrent_TBStatus",
@@ -364,14 +346,10 @@ class Core(QObject):
                                   "Peer_To_Peer_Mentoship", "Role_of_OTZ", "OTZ_Champion_Oreintation"]
 
                 # Create 'Unique_ID' column
-                self.df_ = self.df_.with_columns(
-                    (pl.col("Datim_Code").cast(pl.Utf8) + pl.lit('_') +
-                     pl.col("PepID").cast(pl.Utf8)).alias("Unique_ID")
-                )
+                self.df["Unique_ID"] = self.df["Datim_Code"].astype(str) + "_" + self.df["PepID"].astype(str)
 
                 # Register temporary DataFrame in DuckDB
-                temp_df = self.df_.select(
-                    'Unique_ID', 'State', 'LGA', 'Datim_Code', 'PepID', 'ARTStartDate', 'Surname', 'Firstname')
+                temp_df = self.df[["Unique_ID", "State", "LGA", "Datim_Code", "PepID", "ARTStartDate", "Surname", "Firstname"]]
                 duck.register("new_unique_id_temp", temp_df)
 
                 # Fetch DuckDB tables
@@ -397,39 +375,32 @@ class Core(QObject):
 
                 # Fetch data from DuckDB
                 result_df = duck.execute("SELECT * FROM unique_id").fetchdf()
-                id_df = pl.from_pandas(result_df)
 
                 # Filter unique IDs not present in DuckDB table
-                dff = id_df.filter(~pl.col("Unique_ID").is_in(self.df_["Unique_ID"])).filter(
-                    pl.col("Datim_Code").is_in(self.df_['Datim_Code'])
-                )
-                # print(dff)
-
-                self.df_ = self.df_.with_columns(
-                    [ pl.col(column).cast(pl.Utf8) for column in self.df_.columns] )
+                id_df = result_df
+                dff = id_df[~id_df["Unique_ID"].isin(self.df["Unique_ID"]) & id_df["Datim_Code"].isin(self.df["Datim_Code"])]
 
                 # Data type conversion
-                self.df_ = self.df_.with_columns(
-                    [pl.col(col).cast(pl.Int64, strict=False).alias(col) for col in number_convert] +
-                    [pl.col(col).str.strptime(pl.Date, "%d/%m/%Y", strict=False).alias(col) for col in columns_to_convert] +  [pl.col(col).cast(pl.Float64, strict=False).alias(col) for col in float_convert]
-                )
+                self.df[number_convert] = self.df[number_convert].apply(pd.to_numeric, errors="coerce")
+                self.df[float_convert] = self.df[float_convert].apply(pd.to_numeric, errors="coerce")
+                self.df[columns_to_convert] = self.df[columns_to_convert].apply(pd.to_datetime, errors="coerce", format="%d/%m/%Y")
+                self.df[string_convert] = self.df[string_convert].astype(str)
 
                 # Common filter conditions
-                common_columns = ["IP", "State", "LGA",
-                                  "Datim_Code", "FacilityName", "PepID"]
+                common_columns = ["IP", "State", "LGA", "Datim_Code", "FacilityName", "PepID"]
                 filter_conditions = {
-                    0: {'error_type': "Missing Age at Start of ART", 'condition': pl.col('Ageatstartofart').is_null(), 'columns': common_columns + ["Ageatstartofart"]},
-                    1: {'error_type': "Missing ART Commencement Date", 'condition': pl.col('ARTStartDate').is_null(), 'columns': common_columns + ["ARTStartDate"]},
-                    2: {'error_type': "Commenced ART before DOB", 'condition': pl.col('DaysOnART') < 0, 'columns': common_columns + ["Ageatstartofart"]},
-                    3: {'error_type': "Missing or Future Drug Pickup Date", 'condition': pl.col('Pharmacy_LastPickupdate').is_null(), 'columns': common_columns + ["Pharmacy_LastPickupdate"]},
-                    5: {'error_type': "Males with Pregnancy Status", 'condition': (pl.col('Sex') == 'M') & (pl.col('CurrentPregnancyStatus').is_not_null()), 'columns': common_columns + ["Sex", "CurrentPregnancyStatus"]},
-                    6: {'error_type': "Missing DOB", 'condition': pl.col('DOB').is_null(), 'columns': common_columns + ["DOB"]},
-                    7: {'error_type': "Missing Current Age", 'condition': pl.col('Current_Age').is_null(), 'columns': common_columns + ["Current_Age"]},
-                    8: {'error_type': "Missing Weight", 'condition': (pl.col("CurrentARTStatus_Pharmacy") == "Active") & pl.col('LastWeight').is_null(), 'columns': common_columns + ["LastWeight", "CurrentARTStatus_Pharmacy"]}
+                    0: {'error_type': "Missing Age at Start of ART", 'condition': self.df['Ageatstartofart'].isna(), 'columns': common_columns + ["Ageatstartofart"]},
+                    1: {'error_type': "Missing ART Commencement Date", 'condition': self.df['ARTStartDate'].isna(), 'columns': common_columns + ["ARTStartDate"]},
+                    2: {'error_type': "Commenced ART before DOB", 'condition': self.df['DaysOnART'] < 0, 'columns': common_columns + ["Ageatstartofart"]},
+                    3: {'error_type': "Missing or Future Drug Pickup Date", 'condition': self.df['Pharmacy_LastPickupdate'].isna(), 'columns': common_columns + ["Pharmacy_LastPickupdate"]},
+                    5: {'error_type': "Males with Pregnancy Status", 'condition': (self.df['Sex'] == 'M') & self.df['CurrentPregnancyStatus'].notna(), 'columns': common_columns + ["Sex", "CurrentPregnancyStatus"]},
+                    6: {'error_type': "Missing DOB", 'condition': self.df['DOB'].isna(), 'columns': common_columns + ["DOB"]},
+                    7: {'error_type': "Missing Current Age", 'condition': self.df['Current_Age'].isna(), 'columns': common_columns + ["Current_Age"]},
+                    8: {'error_type': "Missing Weight", 'condition': (self.df["CurrentARTStatus_Pharmacy"] == "Active") & self.df['LastWeight'].isna(), 'columns': common_columns + ["LastWeight", "CurrentARTStatus_Pharmacy"]}
                 }
 
                 self.precomputed_filters = {key: {'error_type': filter_info['error_type'],
-                                                  'error_df': self.df_.filter(filter_info['condition']).select(filter_info['columns'])}
+                                                  'error_df': self.df[filter_info['condition']][filter_info['columns']]}
                                             for key, filter_info in filter_conditions.items()}
                 self.precomputed_filters[4] = {
                     'error_type': 'Missing Records', 'error_df': dff}
@@ -439,13 +410,12 @@ class Core(QObject):
                                         for info in self.precomputed_filters.values() if len(info['error_df']) > 0]
 
                 # Create DataFrame and update model
-                error_info_df = pl.DataFrame(self.error_info_list)
+                error_info_df = pd.DataFrame(self.error_info_list)
                 # logging.info(error_info_df)
-                self._errorModel.setDataFrame(error_info_df.to_pandas())
+                self._errorModel.setDataFrame(error_info_df)
 
                 # Emit signal to update QML
-                self.error_table_data_signal.emit(
-                    'error_info', self.error_info_list)
+                self.error_table_data_signal.emit('error_info', self.error_info_list)
 
             except Exception as e:
                 logging.error(f"Error in update_errorAggregateTable: {e}")
@@ -455,8 +425,7 @@ class Core(QObject):
 
     @Slot(str)
     def openFilteredDF(self, error_type: str):
-        logging.info(
-            f"Opening filtered DataFrame for error type: {error_type}")
+        logging.info(f"Opening filtered DataFrame for error type: {error_type}")
 
         # Find the filter info with the matching error_type
         for index, filter_info in self.precomputed_filters.items():
@@ -465,19 +434,21 @@ class Core(QObject):
                 filtered_df = filter_info.get('error_df')
 
                 if filtered_df is None:
-                    logging.error(
-                        f"No DataFrame found for error type: {error_type}")
+                    logging.error(f"No DataFrame found for error type: {error_type}")
                     return
 
                 # Update the model and emit the signal
-                self._errorDataFrameModel.setDataFrame(filtered_df.to_pandas())
-                self.error_dataframe_signal.emit(filtered_df.to_pandas())
+                self._errorDataFrameModel.setDataFrame(filtered_df)
+                self.error_dataframe_signal.emit(filtered_df)
 
                 self.filteredErrorDataFrame = filtered_df
                 return
 
         # Log a warning if no matching error_type was found
         logging.warning(f"No filter defined for error type: {error_type}")
+
+
+
 
     @Slot()
     def exportErrorsToExcel(self):
@@ -636,7 +607,7 @@ class Core(QObject):
             section, key = config_info
             return self.config_handler.get_value(section, key)
         return None
-    
+
 
 
 if __name__ == "__main__":

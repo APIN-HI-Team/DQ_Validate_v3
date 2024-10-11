@@ -1,50 +1,31 @@
 import os
 import subprocess
-from io import StringIO
-import time
-
-
 import pandas as pd
 
-# from cryptography.fernet import Fernet
+from io import StringIO
 
-from Modules.config_handler import ConfigHandler
-
-
-# def get_mysql_password():
-#     with open('key.key', 'rb') as key_file:
-#         key = key_file.read()
-
-#     cipher = Fernet(key)
-
-#     with open('password.enc', 'rb') as enc_file:
-#         encrypted_password = enc_file.read()
-
-#     return cipher.decrypt(encrypted_password).decode('utf-8')
 
 class MySQLRunner:
-    def __init__(self, user: str, host: str = 'localhost', database: str = '', password: str = 'Nu66et'):
+    def __init__(self, user: str, host: str = 'localhost', database: str = '', password: str = None):
         self.user = user
         self.host = host
-        self.password = 'Nu66et' or os.getenv('MYSQL_PASSWORD')  # Retrieve from environment variable
+        self.password = password or os.getenv('MYSQL_PASSWORD', 'Nu66et')  # Default or environment variable
         if not self.password:
             raise ValueError("MySQL password not set.")
         self.database = database
+        self.mysql_client_path = self._get_mysql_client_path()  # Cache the MySQL client path
         self.error_message = ""
-        self.mysql_client_path = self.get_mysql_client_path()  # Cache the MySQL client path
     
-    def get_mysql_client_path(self) -> str:
+    def _get_mysql_client_path(self) -> str:
         """Locate the MySQL client executable."""
         try:
-            result = subprocess.run(['where', 'mysql'], capture_output=True, text=True)  # 'which' for Linux/macOS
-            if result.returncode == 0:
-                return result.stdout.strip()
-            else:
-                self.error_message = "MySQL client not found."
-                return None
+            result = subprocess.run(['where', 'mysql'], capture_output=True, text=True, check=True)  # 'which' for Linux/macOS
+            return result.stdout.strip()
+        except subprocess.CalledProcessError:
+            self.error_message = "MySQL client not found."
         except Exception as e:
             self.error_message = f"Error finding MySQL client path: {e}"
-            return None
+        return None
 
     def get_mysql_version(self) -> str:
         """Fetch the MySQL version using the command-line client."""
@@ -53,76 +34,60 @@ class MySQLRunner:
 
         command = [self.mysql_client_path, "--version"]
         try:
-            process = subprocess.run(command, capture_output=True, text=True)
-            if process.returncode == 0:
-                version = process.stdout.strip()
-                print(f"MySQL version: {version}")  # Print the version here
-                return version
-            else:
-                self.error_message = f"Error fetching MySQL version: {process.stderr}"
-                print(self.error_message)  # Print error message if failed
-                return None
+            result = subprocess.run(command, capture_output=True, text=True, check=True)
+            version = result.stdout.strip()
+            print(f"MySQL version: {version}")
+            return version
+        except subprocess.CalledProcessError as e:
+            self.error_message = f"Error fetching MySQL version: {e.stderr}"
         except Exception as e:
             self.error_message = f"Error executing MySQL version command: {e}"
-            print(self.error_message)  # Print exception message if failed
-            return None
-
+        return None
 
     def execute_sql_file_and_read_to_pandas(self, sql_file_path: str) -> pd.DataFrame:
-        """Executes an SQL file and reads the results into a Pandas DataFrame."""
+        """Executes an SQL file and reads the result into a Pandas DataFrame."""
         if not self.mysql_client_path:
             print("MySQL client path is not available.")
-            return None
+            return pd.DataFrame()  # Return an empty DataFrame
 
+        # Read SQL file content
+        try:
+            with open(sql_file_path, 'r') as file:
+                sql_content = file.read()
+        except Exception as e:
+            print(f"Error reading SQL file: {e}")
+            return pd.DataFrame()
+
+        # Build the MySQL command
         command = [
             self.mysql_client_path,
-            
             f"--host={self.host}",
             f"--user={self.user}",
             f"--password={self.password}",
             f"--database={self.database}",
-            "--batch",
-            "--raw",
-            f"--execute=source {sql_file_path}"
+            "--batch", "--raw"
         ]
 
         try:
-            # Execute the command and capture output
-            process = subprocess.run(command, capture_output=True, text=True)
-            output = process.stdout
-
-            if process.returncode != 0:
-                self.error_message = process.stderr
-                print(f"Error executing SQL: {self.error_message}")
-                return None
-
-            if not output.strip():
-                print("No output from SQL file execution.")
-                return None
-
-            output_lines = [line for line in output.splitlines() if line.strip() and not line.startswith('--------------')]
-            cleaned_output = '\n'.join(output_lines)
-
-            if cleaned_output:
-                headers = cleaned_output.splitlines()[0]
-                column_names = [col.strip() for col in headers.split('\t')]
-
-                cleaned_output = '\n'.join(cleaned_output.splitlines()[1:])
-
-                df = pd.read_csv(StringIO(cleaned_output), sep='\t')
-
-                if not df.empty and len(df.columns) == len(column_names):
-                    df.columns = column_names
-                df = df.loc[:, ~df.columns.duplicated()]
-
-                return df
-            else:
-                print("No valid data found.")
-                return None
-
+            # Execute the SQL command
+            process = subprocess.run(command, input=sql_content, capture_output=True, text=True, check=True)
+            return self._convert_output_to_dataframe(process.stdout)
+        except subprocess.CalledProcessError as e:
+            self.error_message = f"Error executing SQL: {e.stderr}"
         except Exception as e:
-            print(f"Error reading results into DataFrame: {e}")
-            return None
+            self.error_message = f"Error executing SQL file: {e}"
+        return pd.DataFrame()
+
+    def _convert_output_to_dataframe(self, output: str) -> pd.DataFrame:
+        """Converts the raw SQL result to a Pandas DataFrame."""
+        try:
+            # Use StringIO to convert the output to a file-like object
+            data = pd.read_csv(StringIO(output), sep='\t', lineterminator='\n', on_bad_lines='skip')
+            data = data[data['IP'] == 'APIN']
+            return data
+        except Exception as e:
+            print(f"Error converting SQL output to DataFrame: {e}")
+        return pd.DataFrame()
 
     def sql_error(self) -> str:
         """Return the last SQL error message."""

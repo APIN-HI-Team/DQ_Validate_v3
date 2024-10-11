@@ -1,5 +1,5 @@
 SET GLOBAL innodb_buffer_pool_size = 1024*1024*1024;
-SET @endDate := '2024-09-30';
+SET @endDate := '2024-10-04';
 SET @artStartDate :='';
 SET @dateConfirmed :='';
 DROP TABLE  IF EXISTS full_line_list;
