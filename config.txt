@@ -1,1 +1,2 @@
-password=OLADELE13
+[nmrs]
+db_password=OLADELE13

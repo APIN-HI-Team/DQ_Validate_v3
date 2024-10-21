@@ -121,7 +121,7 @@ class MySQLRunner:
                 with open(file_path, 'r') as file:
                     for line in file:
                         line = line.strip()  # Remove any surrounding whitespace
-                        if line.startswith("password="):
+                        if line.startswith("db_password="):
                             # Extract the value after 'password='
                             return line.split("=", 1)[1]
             except Exception as e:
