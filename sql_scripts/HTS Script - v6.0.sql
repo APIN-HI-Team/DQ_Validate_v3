@@ -1,5 +1,5 @@
 SET @startDate := '';
-SET @endDate := '2024-10-05';
+SET @endDate := '2024-10-02';
 SELECT  
 "APIN" AS "IP", 
    (SELECT `state_province`  FROM  `location` WHERE `location_id` = 8 LIMIT 1) AS State,

@@ -6,25 +6,46 @@ from io import StringIO
 
 
 class MySQLRunner:
-    def __init__(self, user: str, host: str = 'localhost', database: str = '', password: str = None):
+    def __init__(self, user: str, host: str = 'localhost', database: str = '',
+                 password_file: str = 'config.txt'):
         self.user = user
         self.host = host
-        self.password = password or os.getenv('MYSQL_PASSWORD', 'Nu66et')  # Default or environment variable
-        if not self.password:
-            raise ValueError("MySQL password not set.")
         self.database = database
-        self.mysql_client_path = self._get_mysql_client_path()  # Cache the MySQL client path
+
+        # Attempt to retrieve the password from a key-value formatted text file
+        self.password = self._get_password_from_file(password_file)
+
+        # Ensure password is set, raise error if the password is missing or improperly formatted
+        if not self.password:
+            raise ValueError(
+                f"MySQL password not set. Ensure the password is in the correct format in the file: {password_file}")
+
+        # Cache the MySQL client path
+        self.mysql_client_path = self._get_mysql_client_path()
         self.error_message = ""
-    
+
     def _get_mysql_client_path(self) -> str:
         """Locate the MySQL client executable."""
         try:
-            result = subprocess.run(['where', 'mysql'], capture_output=True, text=True, check=True)  # 'which' for Linux/macOS
-            return result.stdout.strip()
-        except subprocess.CalledProcessError:
-            self.error_message = "MySQL client not found."
+            # Define common MySQL client paths for Windows, macOS, and Linux
+            possible_paths = [
+                r'C:\Program Files\MySQL\MySQL Server 5.7\bin\mysql.exe',  # Windows typical path
+                r'C:\Program Files (x86)\MySQL\MySQL Server 5.7\bin\mysql.exe',  # 32-bit Windows
+                '/usr/local/mysql/bin/mysql',  # macOS typical path
+                '/usr/bin/mysql',  # Linux typical path
+                '/usr/local/bin/mysql',  # Another common path on macOS/Linux
+            ]
+
+            # Loop through the paths to find an existing MySQL client executable
+            for path in possible_paths:
+                if os.path.exists(path):
+                    return path
+
+            # If no valid path is found
+            self.error_message = "MySQL client not found in typical locations."
         except Exception as e:
             self.error_message = f"Error finding MySQL client path: {e}"
+
         return None
 
     def get_mysql_version(self) -> str:
@@ -92,3 +113,19 @@ class MySQLRunner:
     def sql_error(self) -> str:
         """Return the last SQL error message."""
         return self.error_message
+
+    def _get_password_from_file(self, file_path: str) -> str:
+        """Read the password from an external text file in 'password=XXXX' format."""
+        if file_path and os.path.exists(file_path):
+            try:
+                with open(file_path, 'r') as file:
+                    for line in file:
+                        line = line.strip()  # Remove any surrounding whitespace
+                        if line.startswith("password="):
+                            # Extract the value after 'password='
+                            return line.split("=", 1)[1]
+            except Exception as e:
+                self.error_message = f"Error reading password from file: {e}"
+        else:
+            self.error_message = "Password file not found."
+        return None
