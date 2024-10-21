@@ -1,24 +1,45 @@
 import os
 import subprocess
 import pandas as pd
+import logging
 
 from io import StringIO
 
 
 class MySQLRunner:
-    def __init__(self, user: str, host: str = 'localhost', database: str = '',
-                 password_file: str = 'config.txt'):
-        self.user = user
-        self.host = host
-        self.database = database
+    def __init__(self, config_file: str = 'database-config.txt', log_file: str = 'database_connector.log'):
+        # Set up logging to a file
+        print("Current working directory:", os.getcwd())
 
-        # Attempt to retrieve the password from a key-value formatted text file
-        self.password = self._get_password_from_file(password_file)
+        # Use an absolute path for the log file
+        log_file = os.path.abspath(log_file)
 
-        # Ensure password is set, raise error if the password is missing or improperly formatted
-        if not self.password:
-            raise ValueError(
-                f"MySQL password not set. Ensure the password is in the correct format in the file: {password_file}")
+        # Set up logging
+        try:
+            logging.basicConfig(
+                filename=log_file,
+                filemode='a',
+                format='%(asctime)s - %(levelname)s - %(message)s',
+                level=logging.DEBUG
+            )
+            logging.info("Logging is set up.")
+        except Exception as e:
+            print(f"Logging setup error: {e}")
+
+        logging.info("MySQLRunner initialized.")
+
+        # Read configuration from file
+        config = self._read_config_from_file(config_file)
+
+        # Assign user, host, database, and password from the config file
+        self.user = config.get('db_user')
+        self.host = config.get('db_host')
+        self.database = config.get('db_database')
+        self.password = config.get('db_password')
+
+        if not all([self.user, self.host, self.database, self.password]):
+            logging.error(f"Configuration error: user, database, or password missing in {config_file}")
+            raise ValueError(f"Configuration error: user, database, or password missing in {config_file}")
 
         # Cache the MySQL client path
         self.mysql_client_path = self._get_mysql_client_path()
@@ -114,18 +135,16 @@ class MySQLRunner:
         """Return the last SQL error message."""
         return self.error_message
 
-    def _get_password_from_file(self, file_path: str) -> str:
-        """Read the password from an external text file in 'password=XXXX' format."""
-        if file_path and os.path.exists(file_path):
-            try:
-                with open(file_path, 'r') as file:
-                    for line in file:
-                        line = line.strip()  # Remove any surrounding whitespace
-                        if line.startswith("db_password="):
-                            # Extract the value after 'password='
-                            return line.split("=", 1)[1]
-            except Exception as e:
-                self.error_message = f"Error reading password from file: {e}"
-        else:
-            self.error_message = "Password file not found."
-        return None
+    def _read_config_from_file(self, config_file: str) -> dict:
+        # Read configuration in key-value format from a file
+        config = {}
+        try:
+            with open(config_file, 'r') as file:
+                for line in file:
+                    if '=' in line:
+                        key, value = line.split('=', 1)
+                        config[key.strip()] = value.strip()
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Config file '{config_file}' not found.")
+
+        return config

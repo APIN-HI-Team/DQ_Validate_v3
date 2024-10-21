@@ -1,2 +1,0 @@
-[nmrs]
-db_password=OLADELE13
