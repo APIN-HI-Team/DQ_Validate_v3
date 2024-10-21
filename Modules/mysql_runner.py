@@ -1,5 +1,7 @@
 import os
 import subprocess
+import sys
+
 import pandas as pd
 import logging
 
@@ -8,25 +10,21 @@ from io import StringIO
 
 class MySQLRunner:
     def __init__(self, config_file: str = 'database-config.txt', log_file: str = 'database_connector.log'):
-        # Set up logging to a file
-        print("Current working directory:", os.getcwd())
 
-        # Use an absolute path for the log file
-        log_file = os.path.abspath(log_file)
+        # Determine the base path
+        if getattr(sys, 'frozen', False):
+            # If the application is frozen (running as an .exe)
+            base_path = sys._MEIPASS
+        else:
+            # If the application is running in the normal Python environment
+            base_path = os.path.dirname(os.path.abspath(__file__))
 
-        # Set up logging
-        try:
-            logging.basicConfig(
-                filename=log_file,
-                filemode='a',
-                format='%(asctime)s - %(levelname)s - %(message)s',
-                level=logging.DEBUG
-            )
-            logging.info("Logging is set up.")
-        except Exception as e:
-            print(f"Logging setup error: {e}")
+        # Construct full paths for config and log files
+        self.config_file = os.path.join(base_path, config_file)
+        self.log_file = os.path.join(base_path, log_file)
 
-        logging.info("MySQLRunner initialized.")
+        # Set up logging to the log file
+        self._setup_logging()
 
         # Read configuration from file
         config = self._read_config_from_file(config_file)
@@ -148,3 +146,17 @@ class MySQLRunner:
             raise FileNotFoundError(f"Config file '{config_file}' not found.")
 
         return config
+
+    def _setup_logging(self):
+        """Set up logging to a file."""
+        try:
+            logging.basicConfig(
+                filename=self.log_file,
+                filemode='a',  # Append mode
+                format='%(asctime)s - %(levelname)s - %(message)s',
+                level=logging.DEBUG
+            )
+            logging.info("Logging is set up.")
+            logging.info("MySQLRunner initialized.")
+        except Exception as e:
+            print(f"Logging setup error: {e}")
