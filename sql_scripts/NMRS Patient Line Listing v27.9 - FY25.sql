@@ -1,5 +1,6 @@
 SET GLOBAL innodb_buffer_pool_size = 1024*1024*1024;
-SET @endDate := '2024-10-05';
+-- SET SESSION sql_mode=(SELECT REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', ''));
+SET @endDate := '2024-11-23';
 SET @artStartDate :='';
 SET @dateConfirmed :='';
 DROP TABLE  IF EXISTS full_line_list;
@@ -194,15 +195,6 @@ MAX(IF(obs.concept_id=165708,cn1.name,NULL) ) AS `CurrentRegimenLine`,
      ORDER BY ob.obs_datetime DESC LIMIT 1) AS `CurrentARTRegimen`,
      
      ( SELECT  cn.`name` FROM `obs` ob  JOIN `concept_name` cn ON cn.`concept_id` = ob.value_coded JOIN encounter e ON ob.encounter_id=e.encounter_id
-     WHERE ob.`concept_id` IN (165727)  AND cn.`locale` = 'en' AND cn.`locale_preferred` = 1
-     AND ob.`obs_datetime` <= @endDate
-     AND ob.`person_id` =  patient.`patient_id`
-     AND e.encounter_type=13
-     AND ob.voided=0
-     AND e.voided=0
-     ORDER BY ob.obs_datetime DESC LIMIT 1) AS `CurrentOIDrug`,
-     
-     ( SELECT  cn.`name` FROM `obs` ob  JOIN `concept_name` cn ON cn.`concept_id` = ob.value_coded JOIN encounter e ON ob.encounter_id=e.encounter_id
      WHERE ob.`concept_id` IN (166148)  AND cn.`locale` = 'en' AND cn.`locale_preferred` = 1
      AND ob.`obs_datetime` <= @endDate
      AND ob.`person_id` =  patient.`patient_id`
@@ -222,7 +214,10 @@ MAX(IF(obs.concept_id=165708,cn1.name,NULL) ) AS `CurrentRegimenLine`,
      AND e.voided=0
      ORDER BY ob.obs_datetime DESC LIMIT 1) AS `DSD_Model_Type`,
      
-MAX(IF(obs.concept_id=165050,cn1.name,NULL)) AS `CurrentPregnancyStatus`,
+   IF(person.gender='F',getcodedvalueobsid(getmaxconceptobsidwithformid(patient.patient_id,165050,14,@endDate)),NULL) AS `CurrentPregnancyStatus`,
+   IF(person.gender='F',DATE_FORMAT(getobsdatetime(getmaxconceptobsidwithformid(patient.patient_id,165050,14,@endDate)),'%d/%m/%Y'),NULL) AS `CurrentPregnancyStatusDate`,
+     
+ -- MAX(IF(obs.concept_id=165050,cn1.name,NULL)) AS `CurrentPregnancyStatus`,
 -- MAX(IF(obs.concept_id=856,obs.value_numeric,NULL)) AS `CurrentViralLoad`,
 ( SELECT  ob.value_numeric FROM `obs` ob JOIN encounter e ON ob.encounter_id=e.encounter_id
      WHERE ob.`concept_id` IN (856)
@@ -486,25 +481,58 @@ DATE_FORMAT(( SELECT  MIN(DATE(`obs_datetime`)) FROM `obs` ob JOIN encounter e O
      AND ob.voided=0
      AND e.voided=0
      ORDER BY e.`encounter_datetime` DESC LIMIT 1) AS 'CSF_for_CrAg_Result',
-     /*
-     DATE(careCard.nextAppointment) AS EstimatedNextAppointmentPharmacy,
-     DATE(careCardA.nextAppointmentA) AS NextAppointmentCareCard, 
-     */
-     (SELECT ob.value_text FROM `obs` ob JOIN encounter e ON ob.encounter_id = e.encounter_id 
-     WHERE ob.`concept_id` IN (166406) 
-     AND e.`encounter_datetime` <= @endDate 
-     AND ob.`person_id` = patient.`patient_id` 
-     AND e.encounter_type = 13 
-     AND ob.voided = 0 
-     AND e.voided = 0 
-     ORDER BY ob.obs_datetime DESC LIMIT 1) AS 'PillBalance',
      
-     (SELECT ob.value_text FROM `obs` ob JOIN concept e ON ob.concept_id = e.concept_id 
-     WHERE ob.`concept_id` IN (162169) 
-     AND DATE(ob.`obs_datetime`) <= @endDate 
-     AND ob.`person_id` = patient.`patient_id`
-     AND ob.voided = 0  
-     ORDER BY ob.obs_datetime DESC LIMIT 1) AS 'Notes',
+     CASE 
+        WHEN EXISTS (
+            SELECT 1
+            FROM encounter e
+            WHERE e.`encounter_type` = 13
+              AND e.`encounter_datetime` <= @endDate
+              AND e.`patient_id` = patient.`patient_id`
+              AND e.voided = 0
+        ) THEN 
+            CASE 
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM `obs` ob
+                    JOIN encounter e ON ob.encounter_id = e.encounter_id 
+                    WHERE ob.`concept_id` = 166406 
+                      AND ob.`person_id` = patient.`patient_id` 
+                      AND e.voided = 0 
+                      AND e.`encounter_datetime` = (
+                          SELECT MAX(encounter_datetime)
+                          FROM encounter
+                          WHERE encounter_type = 13
+                            AND patient_id = patient.`patient_id`
+                            AND encounter_datetime <= @endDate
+                            AND voided = 0
+                      )
+                ) THEN 
+                    (SELECT ob.value_text
+                     FROM `obs` ob
+                     JOIN encounter e ON ob.encounter_id = e.encounter_id 
+                     WHERE ob.`concept_id` = 166406 
+                       AND ob.`person_id` = patient.`patient_id` 
+                       AND e.voided = 0 
+                       AND e.`encounter_datetime` = (
+                           SELECT MAX(encounter_datetime)
+                           FROM encounter
+                           WHERE encounter_type = 13
+                             AND patient_id = patient.`patient_id`
+                             AND encounter_datetime <= @endDate
+                             AND voided = 0
+                       )
+                     ORDER BY ob.obs_datetime DESC 
+                     LIMIT 1) 
+                ELSE 
+                    ''  -- Return blank if no observation exists for the latest encounter
+            END
+        ELSE 
+            ''  -- Return blank if no encounter exists
+    END AS 'PillBalance',
+        
+    
+      
      -- DATE_FORMAT(getdatevalueobsid(getmaxconceptobsidwithformid(patient.patient_id,5096,27,@endDate)),'%d/%m/%Y') as `EstimatedNextAppointmentPharmacy`,
      DATE_FORMAT((SELECT ob.value_datetime FROM `obs` ob JOIN encounter e ON ob.encounter_id = e.encounter_id 
      WHERE ob.`concept_id` IN (5096) 

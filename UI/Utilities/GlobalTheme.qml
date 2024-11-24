@@ -13,9 +13,7 @@ QtObject {
     property color bodyTextColor: "#333333" // (Main Content)
     property color cardBorderColor: "#E0E0E0" // cards, containers, and input fields
     property color primaryBorderColor: "#A9B6EA"
-}
-// QtObject {
-//     id: theme
+} // QtObject {//     id: theme
 
 //     property color primaryColor: "#28A745" // Primary color (Windows blue)
 //     property color secondaryColor: "#28A745"

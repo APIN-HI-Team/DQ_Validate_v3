@@ -40,6 +40,7 @@ Rectangle {
         CustomFileDialog {
             id: artScriptPath
             height: 30
+            // text:
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: parent.top

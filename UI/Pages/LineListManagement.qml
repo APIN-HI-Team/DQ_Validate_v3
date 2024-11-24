@@ -239,6 +239,7 @@ Pane {
 
                         onClicked: {
                             core.update_errorAggregateTable()
+
                             if (core.errorModel.row_count > 0) {
                                 customBusyIndicator.running = true
 

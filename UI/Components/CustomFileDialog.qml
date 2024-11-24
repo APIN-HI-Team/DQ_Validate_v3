@@ -30,6 +30,7 @@ TextField {
         onAccepted: {
             core.selectFile(fileDialog.selectedFile,
                             placeholder) // Call the Python method
+            customTextEdit.text = fileDialog.selectedFile
         }
     }
 

@@ -2,7 +2,7 @@
 # Please Edit start and end dates (e.g @startDate ='2021-11-01'  and @endDate = '2021-11-31') in this format YYYY-MM-DD;
 
 SET @startDate := '';
-SET @endDate := '2024-10-05';
+SET @endDate := '2024-11-23';
 
 
 DROP TABLE  IF EXISTS `lims_sam`;

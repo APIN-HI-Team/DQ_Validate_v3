@@ -1,0 +1,5 @@
+[nmrs]
+db_user=root
+db_host=localhost
+db_database=openmrs
+db_password=Nu66et
